@@ -17,7 +17,7 @@ SUS-CENZURA is designed to help users protect sensitive information or maintain 
 1. Clone the repository:
 
     ```shell
-    git clone https://github.com/your-username/SUS-CENZURA.git
+    git clone https://github.com/Robertkq/SUS-CENZURA.git
     ```
 
 2. Install the required dependencies:
