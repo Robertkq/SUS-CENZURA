@@ -75,7 +75,6 @@ class windowManager:
                 self.label.config(text="Please select edit options before starting processing")
             else:
                 pub.sendMessage('start_processing', file_path=self.file_path)
-                video_loaded = False
         else:
             self.label.config(text="No file loaded, load a file to begin processing")
 
@@ -92,7 +91,7 @@ class windowManager:
             self.blur_options_label = tk.Label(self.edit_frame, text="Select objects to blur")
             self.blur_options_label.pack()
             self.blur_options = ["Faces", "License"]
-            self.blur_listbox = tk.Listbox(self.edit_frame, selectmode=tk.MULTIPLE)
+            self.blur_listbox = tk.Listbox(self.edit_frame, selectmode=tk.MULTIPLE, selectbackground='blue', selectforeground='white')
             for option in self.blur_options:
                 self.blur_listbox.insert(tk.END, option)
             self.blur_listbox.pack()
@@ -122,24 +121,25 @@ class windowManager:
     def update_frame(self, frame):
         # Convert the frame to an image
         self.original_image = Image.fromarray(frame)
-        # Create a PhotoImage object from the image
-        self.image = ImageTk.PhotoImage(self.original_image)
+
+        # Get the current width and height of the main window
+        width = self.sub_window.winfo_width()
+        height = self.sub_window.winfo_height()
+
+        # Resize the image
+        self.resize_image(width, height)
 
         if self.label is None:
             self.label = tk.Label(self.sub_window, image=self.image)
             self.label.image = self.image
             self.label.pack()
-            self.label.bind('<Configure>', self.resize_image)
         else:
             self.label.configure(image=self.image)
             self.label.image = self.image
 
-    def resize_image(self, event):
-        # Get the new width and height of the label
-        width, height = event.width, event.height
-        # Resize the original image to the new size
+    def resize_image(self, width, height):
+        # Resize the original image
         resized_image = self.original_image.resize((width, height))
-        # Create a new PhotoImage object from the resized image
+
+        # Create a new PhotoImage object
         self.image = ImageTk.PhotoImage(resized_image)
-        # Update the label to display the new image
-        self.label.config(image=self.image)
