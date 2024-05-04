@@ -11,6 +11,7 @@ class application:
         self.editor = editor.editor()
         pub.subscribe(self.load_video_handle, 'load_video')
         pub.subscribe(self.start_processing_handle, 'start_processing')
+        pub.subscribe(self.update_frame_handle, 'update_frame')
         
     def __del__(self):
         print("Application stopped")
@@ -19,10 +20,12 @@ class application:
         print("File path:", file_path)
 
     def start_processing_handle(self, file_path):
-        print("Processing started")
-        self.editor.process_video(file_path)
-        print("Processing finished")
+        settings = self.ui.get_settings()
+        worker = threading.Thread(target=self.editor.process_video, args=(file_path, settings))
+        worker.start()
 
+    def update_frame_handle(self, frame):
+        self.ui.update_frame(frame)
 
     def run(self):
         self.ui.run()

@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import filedialog
 from pubsub import pub
+from PIL import Image, ImageTk
 
 class windowManager:
     def __init__(self):
@@ -11,6 +12,8 @@ class windowManager:
         self.sub_window = self.create_sub_window()
         self.file_path = ""
         self.video_loaded = False
+        self.edit_frame_shown = False
+        self.edit_frame_initialized = False
         print("Window Manager initialized")
 
     def create_window(self):
@@ -38,14 +41,14 @@ class windowManager:
         self.save_button.pack(side=tk.LEFT, fill=tk.X, expand=True)
         buttons["save"] = self.save_button
 
-        self.edit_button = tk.Button(self.button_frame, text="Edit")
+        self.edit_button = tk.Button(self.button_frame, text="Edit", command=self.open_edit_frame)
         self.edit_button.pack(side=tk.LEFT, fill=tk.X, expand=True)
         buttons["edit"] = self.edit_button
 
         return buttons
 
     def create_sub_window(self):
-        self.sub_window = tk.Frame(self.window, bg="grey", bd=5)
+        self.sub_window = tk.Frame(self.window, bg="grey")
         self.sub_window.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
         self.label = tk.Label(self.sub_window, text="Load a file to begin processing")
         self.label.pack()
@@ -68,8 +71,75 @@ class windowManager:
 
     def start_processing(self):
         if self.video_loaded:
-            pub.sendMessage('start_processing', file_path=self.file_path)
-            video_loaded = False
+            if not self.edit_frame_initialized:
+                self.label.config(text="Please select edit options before starting processing")
+            else:
+                pub.sendMessage('start_processing', file_path=self.file_path)
+                video_loaded = False
         else:
             self.label.config(text="No file loaded, load a file to begin processing")
+
+    def open_edit_frame(self):
+        if self.edit_frame_shown:
+            self.edit_frame_shown = False
+            self.edit_frame.place_forget()
+        else:
+            self.edit_frame_initialized=True
+            self.edit_frame = tk.Frame(self.window)
+            self.edit_frame.place(x=0, y=25, relwidth=0.1, relheight=1)
+
+            self.edit_frame_shown = True
+            self.blur_options_label = tk.Label(self.edit_frame, text="Select objects to blur")
+            self.blur_options_label.pack()
+            self.blur_options = ["Faces", "License"]
+            self.blur_listbox = tk.Listbox(self.edit_frame, selectmode=tk.MULTIPLE)
+            for option in self.blur_options:
+                self.blur_listbox.insert(tk.END, option)
+            self.blur_listbox.pack()
+
+            self.blur_type_label = tk.Label(self.edit_frame, text="Blur Type")
+            self.blur_type_label.pack()
+
+            self.blur_type_options = ["Normal", "Gaussian", "Motion", "Radial"]
+            self.blur_type_var = tk.StringVar(self.edit_frame)
+            self.blur_type_var.set(self.blur_type_options[0])  # default value
+            self.blur_type_optionmenu = tk.OptionMenu(self.edit_frame, self.blur_type_var, *self.blur_type_options)
+            self.blur_type_optionmenu.pack()
+
+            self.blur_level_label = tk.Label(self.edit_frame, text="Blur Level")
+            self.blur_level_label.pack()
+
+            self.blur_level_scale = tk.Scale(self.edit_frame, from_=1, to=10, orient=tk.HORIZONTAL)
+            self.blur_level_scale.pack()
+
+    def get_settings(self):
+        settings = {}
+        settings["blur_options"] = self.blur_listbox.curselection()
+        settings["blur_type"] = self.blur_type_var.get()
+        settings["blur_level"] = self.blur_level_scale.get()
+        return settings
         
+    def update_frame(self, frame):
+        # Convert the frame to an image
+        self.original_image = Image.fromarray(frame)
+        # Create a PhotoImage object from the image
+        self.image = ImageTk.PhotoImage(self.original_image)
+
+        if self.label is None:
+            self.label = tk.Label(self.sub_window, image=self.image)
+            self.label.image = self.image
+            self.label.pack()
+            self.label.bind('<Configure>', self.resize_image)
+        else:
+            self.label.configure(image=self.image)
+            self.label.image = self.image
+
+    def resize_image(self, event):
+        # Get the new width and height of the label
+        width, height = event.width, event.height
+        # Resize the original image to the new size
+        resized_image = self.original_image.resize((width, height))
+        # Create a new PhotoImage object from the resized image
+        self.image = ImageTk.PhotoImage(resized_image)
+        # Update the label to display the new image
+        self.label.config(image=self.image)
